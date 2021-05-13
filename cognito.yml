@@ -385,7 +385,7 @@ Resources:
             FunctionName: !GetAtt LambdaFunction.Arn
             Principal: "cognito-idp.amazonaws.com"
             SourceArn: !GetAtt CognitoUserPool.Arn
-    MySecretResourcePolicy:
+    SecretResourcePolicy:
         Type: 'AWS::SecretsManager::ResourcePolicy'
         DependsOn: CognitoUserLambdaFunction
         Properties:
