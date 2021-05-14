@@ -80,7 +80,7 @@ Resources:
                             client = boto3.client('cognito-idp')
                             secret_client = boto3.client('secretsmanager')
                             iot_client = boto3.client('iot')
-                            iot_response = iot_client.describe_endpoint()
+                            iot_response = iot_client.describe_endpoint(endpointType='iot:Data-ATS')
                             iot_endpoint = iot_response['endpointAddress']
                             clientId=event['ResourceProperties']['ClientId']
                             userName=event['ResourceProperties']['UserName']            
@@ -377,16 +377,18 @@ Resources:
                 -   Effect: Allow
                     Action:
                     - iot:Publish
-                    Resource: !Sub
-                        - arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/${CIPID}/${iot:ClientId}/*
-                        - { CIPID: !Ref CognitoIdentityPool }
-                -   Effect: Allow
-                    Action:
-                    - iot:Receive
-                    - iot:Subscribe
-                    Resource: !Sub
-                        - arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/${CIPID}/${iot:ClientId}/*
-                        - { CIPID: !Ref CognitoIdentityPool }
+                    Resource: 
+                    - !Join ["",["arn:aws:iot:", !Ref "AWS::Region",":", !Ref "AWS::AccountId",":topic/",!Ref CognitoIdentityPool,"/${iot:ClientId}/*"]]
+                #     Resource: !Sub
+                #         - arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/${CIPID}/"${iot:ClientId}"/*
+                #         - { CIPID: !Ref CognitoIdentityPool }
+                # -   Effect: Allow
+                #     Action:
+                #     - iot:Receive
+                #     - iot:Subscribe
+                #     Resource: !Sub
+                #         - arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/${CIPID}/${iot:ClientId}/*
+                #         - { CIPID: !Ref CognitoIdentityPool }
     LambdaFunction:
         Type: "AWS::Lambda::Function"
         Properties:
