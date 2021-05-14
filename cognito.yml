@@ -362,18 +362,18 @@ Resources:
                                             -   ""
                                             -   - !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/
                                                 - !Ref CognitoUserPool
-    # CognitoIoTPolicy:
-    #     Type: AWS::IoT::Policy
-    #     Properties:
-    #         PolicyName: !Sub ${Prefix}-cognito-iot-policy
-    #         PolicyDocument:
-    #             Version: 2012-10-17
-    #             Statement:
-    #             -   Effect: Allow
-    #                 Action:
-    #                 - iot:Connect
-    #                 Resource: !Sub
-    #                     - arn:aws:iot:${AWS::Region}:${AWS::AccountId}:client/*
+    CognitoIoTPolicy:
+        Type: AWS::IoT::Policy
+        Properties:
+            PolicyName: !Sub ${Prefix}-cognito-iot-policy
+            PolicyDocument:
+                Version: 2012-10-17
+                Statement:
+                -   Effect: Allow
+                    Action:
+                    - iot:Connect
+                    Resource: !Sub
+                        - arn:aws:iot:${AWS::Region}:${AWS::AccountId}:client/*
     #             # -   Effect: Allow
     #             #     Action:
     #             #     - iot:Publish
