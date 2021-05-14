@@ -378,8 +378,14 @@ Resources:
                 -   Effect: Allow
                     Action:
                     - iot:Publish
+                    - iot:Receive
                     Resource: 
                     - !Join ["",["arn:aws:iot:", !Ref "AWS::Region",":", !Ref "AWS::AccountId",":topic/",!Ref CognitoIdentityPool,"/${iot:ClientId}/*"]]
+                -   Effect: Allow
+                    Action:
+                    - iot:Subscribe
+                    Resource: 
+                    - !Join ["",["arn:aws:iot:", !Ref "AWS::Region",":", !Ref "AWS::AccountId",":topicfilter/",!Ref CognitoIdentityPool,"/${iot:ClientId}/*"]]
     #             #     Resource: !Sub
     #             #         - arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/${CIPID}/"${iot:ClientId}"/*
     #             #         - { CIPID: !Ref CognitoIdentityPool }
