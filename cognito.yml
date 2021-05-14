@@ -372,8 +372,9 @@ Resources:
                 -   Effect: Allow
                     Action:
                     - iot:Connect
-                    Resource: !Sub
-                        - arn:aws:iot:${AWS::Region}:${AWS::AccountId}:client/*
+                    Resource: !Join 
+                                -   ""
+                                -   -   !Sub arn:aws:iot:${AWS::Region}:${AWS::AccountId}:client/*
     #             # -   Effect: Allow
     #             #     Action:
     #             #     - iot:Publish
