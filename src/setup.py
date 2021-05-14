@@ -1,5 +1,4 @@
-import iot-cognito
-
-iot-cognito.get_user_input()
+import IoTCognito
+IoTCognito.get_user_input()
 
 
