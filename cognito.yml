@@ -120,9 +120,13 @@ Resources:
                                         'Value': emailAddress
                                     },
                                     {
-                                        'Key': 'IoTPolicy',
-                                        'Value': iotPolicy
-                                    }
+                                        'Key': 'UserPoolId',
+                                        'Value': userPoolId
+                                    },
+                                    {
+                                        'Key': 'ClientId',
+                                        'Value': clientId
+                                    },
                                 ]
                                 )
                                 responseData['SecretArn'] = secret_response['ARN']
