@@ -1,0 +1,479 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Deploy all needed resources to support IoT Cognito identities"
+Parameters:
+    Prefix:
+        Type: String
+        Description: Unique prefix for AWS Resources
+        Default: "AoD"
+    Email:
+        Type: String
+        Description: Email address for an app client user
+        Default: "satijads@amazon.com"
+    IpAddress:
+        Type: String
+        Description: IP address for an IoT device
+        AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})
+        ConstraintDescription: Only provide a valid IP address X.X.X.X
+        Default: '107.141.235.104'
+Resources:
+    CognitoUserPool:
+        Type: "AWS::Cognito::UserPool"
+        Properties:
+            UserPoolName: !Sub ${Prefix}-user-pool
+            Policies: 
+                PasswordPolicy: 
+                    MinimumLength: 8
+                    RequireUppercase: true
+                    RequireLowercase: true
+                    RequireNumbers: true
+                    RequireSymbols: true
+                    TemporaryPasswordValidityDays: 7
+            LambdaConfig: 
+                PreSignUp: !GetAtt LambdaFunction.Arn
+            Schema: 
+                - 
+                    Name: "email"
+                    AttributeDataType: "String"
+                    Required: true
+            AutoVerifiedAttributes: 
+                - "email"
+            MfaConfiguration: "OFF"
+            AdminCreateUserConfig: 
+                AllowAdminCreateUserOnly: false
+            UsernameConfiguration: 
+                CaseSensitive: false
+    CognitoUserPoolClient:
+        Type: "AWS::Cognito::UserPoolClient"
+        Properties:
+            UserPoolId: !Ref CognitoUserPool
+            ClientName: !Sub ${Prefix}-app-client
+            RefreshTokenValidity: 200
+            GenerateSecret: false
+            ExplicitAuthFlows:
+                - ALLOW_USER_PASSWORD_AUTH
+                - ALLOW_REFRESH_TOKEN_AUTH 
+    CognitoUserLambdaFunction:
+        Type: "AWS::Lambda::Function"
+        Properties:
+            Description: ""
+            FunctionName: !Sub ${Prefix}-cognito-user-creation
+            Handler: "index.function_handler"
+            MemorySize: 128
+            Role: !GetAtt IAMLambdaExecutionRole2.Arn
+            Runtime: python3.7
+            Timeout: 30
+            Code:
+                ZipFile: |
+                    import sys
+                    import cfnresponse
+                    import boto3 
+                    import json
+                    import logging
+                    from botocore.exceptions import ClientError
+                    logger = logging.getLogger()
+                    logger.setLevel(logging.INFO)
+                    def function_handler(event, context):
+                        responseData = {}
+                        try:
+                            logger.info('Received event: {}'.format(json.dumps(event)))
+                            result = cfnresponse.FAILED
+                            client = boto3.client('cognito-idp')
+                            secret_client = boto3.client('secretsmanager')
+                            iot_client = boto3.client('iot')
+                            iot_response = iot_client.describe_endpoint(endpointType='iot:Data-ATS')
+                            iot_endpoint = iot_response['endpointAddress']
+                            clientId=event['ResourceProperties']['ClientId']
+                            userName=event['ResourceProperties']['UserName']            
+                            emailAddress=event['ResourceProperties']['EmailAddress']
+                            userPoolId=event['ResourceProperties']['UserPoolId']
+                            identityPoolId=event['ResourceProperties']['IdentityPoolId']
+                            iotPolicy=event['ResourceProperties']['IoTPolicy']
+                            if event['RequestType'] == 'Create':
+                                password_response = secret_client.get_random_password(
+                                PasswordLength=12,
+                                ExcludeUppercase=False,
+                                ExcludeLowercase=False,
+                                IncludeSpace=False,
+                                RequireEachIncludedType=True,
+                                ExcludeCharacters='/@"\'\\'
+                                )
+                                secretstring = {userName:password_response['RandomPassword']}
+                                secret_response = secret_client.create_secret(
+                                Name=userPoolId+'_'+userName,
+                                Description='Cognito User Pool User Password',
+                                SecretString=json.dumps(secretstring),
+                                Tags=[
+                                    {
+                                        'Key': 'ClientId',
+                                        'Value': clientId
+                                    },
+                                    {
+                                        'Key': 'IdentityPoolId',
+                                        'Value': identityPoolId
+                                    },
+                                    {
+                                        'Key': 'IoTEndpoint',
+                                        'Value': iot_endpoint
+                                    },
+                                    {
+                                        'Key': 'EmailAddress',
+                                        'Value': emailAddress
+                                    },
+                                    {
+                                        'Key': 'UserPoolId',
+                                        'Value': userPoolId
+                                    },
+                                    {
+                                        'Key': 'ClientId',
+                                        'Value': clientId
+                                    },
+                                ]
+                                )
+                                responseData['SecretArn'] = secret_response['ARN']
+                                response = client.sign_up(
+                                ClientId=clientId,
+                                Username=userName,
+                                Password=password_response['RandomPassword'],
+                                UserAttributes=[
+                                    {
+                                        'Name': 'email',
+                                        'Value': emailAddress
+                                    },])
+                                responseData['UserConfirmed'] = response['UserConfirmed']
+                                logger.info('Created User: %s, and User Confirmed status is: %s' % 
+                                    (userName, response['UserConfirmed']))
+                                result = cfnresponse.SUCCESS
+                            elif event['RequestType'] == 'Update':
+                                logger.info('Updating user: %s' % UserName)
+                                result = cfnresponse.SUCCESS
+                            elif event['RequestType'] == 'Delete':
+                                response = secret_client.delete_secret(
+                                SecretId=userPoolId+'_'+userName,
+                                ForceDeleteWithoutRecovery=True)
+                                response = client.admin_delete_user(
+                                UserPoolId=userPoolId,Username=userName)                                                          
+                                logger.info('Deleted User: %s' % (userName))
+                                result = cfnresponse.SUCCESS
+                        except ClientError as e:
+                            logger.error('Error: {}'.format(e))
+                            result = cfnresponse.FAILED
+                        logger.info('Returning response of: {}, with result of: {}'.format(result, responseData))
+                        sys.stdout.flush()
+                        cfnresponse.send(event, context, result, responseData)                                                              
+    CognitoUserPoolUserCreation:
+        Type: Custom::CognitoUserSetup
+        DependsOn: CognitoUserLambdaFunction
+        Properties:
+            ServiceToken: !GetAtt CognitoUserLambdaFunction.Arn
+            ClientId: !Ref CognitoUserPoolClient
+            UserName: !Sub ${Prefix}-app-user
+            EmailAddress: !Sub ${Email}
+            UserPoolId: !Ref CognitoUserPool
+            IdentityPoolId: !Ref CognitoIdentityPool
+            IoTPolicy: !Ref CognitoIoTPolicy
+    CognitoIdentityPool:
+        Type: "AWS::Cognito::IdentityPool"
+        Properties:
+            IdentityPoolName: !Sub ${Prefix}-edge-identity-pool
+            AllowUnauthenticatedIdentities: true
+            AllowClassicFlow: true
+            CognitoIdentityProviders: 
+                - 
+                    ProviderName: !GetAtt CognitoUserPool.ProviderName
+                    ClientId: !Ref CognitoUserPoolClient
+    CognitoIdentityPoolRoleAttachment:
+        Type: "AWS::Cognito::IdentityPoolRoleAttachment"
+        Properties:
+            IdentityPoolId: !Ref CognitoIdentityPool
+            Roles: 
+                authenticated: !GetAtt IAMAuthenticatedRole.Arn
+                unauthenticated: !GetAtt IAMUnAuthenticatedRole.Arn
+    IAMAuthenticatedRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            Path: "/"
+            MaxSessionDuration: 3600            
+            RoleName: !Sub ${Prefix}-IdentityPoolAuthRole
+            AssumeRolePolicyDocument: 
+                Version: '2012-10-17'
+                Statement:
+                    -   Effect: Allow
+                        Principal:
+                            Federated: "cognito-identity.amazonaws.com"
+                        Action: "sts:AssumeRoleWithWebIdentity"
+                        Condition:
+                            StringEquals:
+                                #cognito-identity.amazonaws.com:aud: !Join [":", [!Ref "AWS::Region", !Ref CognitoIdentityPool]]
+                                cognito-identity.amazonaws.com:aud: !Ref CognitoIdentityPool
+                            ForAnyValue:StringLike:
+                                cognito-identity.amazonaws.com:amr: authenticated
+            Policies:
+                -   PolicyName: !Sub ${Prefix}-IdentityPoolAuthRolePolicy
+                    PolicyDocument:
+                        Version: "2012-10-17"
+                        Statement:
+                            -   Effect: Allow
+                                Action:
+                                - cognito-identity:DescribeIdentityPool
+                                - cognito-identity:GetIdentityPoolRoles
+                                - cognito-identity:GetOpenIdTokenForDeveloperIdentity
+                                - cognito-identity:GetPrincipalTagAttributeMap
+                                - cognito-identity:ListIdentities
+                                - cognito-identity:ListTagsForResource
+                                - cognito-identity:LookupDeveloperIdentity
+                                - iot:Publish
+                                - iot:Subscribe
+                                Resource:
+                                - !Join [":",["arn:aws:iot", !Ref "AWS::Region", !Ref "AWS::AccountId", "topicfilter/${cognito-identity.amazonaws.com:aud}/${cognito-identity.amazonaws.com:sub}/*"]]
+                                - !Join [":",["arn:aws:iot", !Ref "AWS::Region", !Ref "AWS::AccountId", "topic/${cognito-identity.amazonaws.com:aud}/${cognito-identity.amazonaws.com:sub}/*"]]
+                                - !Join [":",["arn:aws:cognito-identity", !Ref "AWS::Region", !Ref "AWS::AccountId", "identitypool/${cognito-identity.amazonaws.com:aud}"]]
+                            -   Effect: Allow
+                                Action:
+                                - cognito-identity:DescribeIdentity
+                                - cognito-identity:GetCredentialsForIdentity
+                                - cognito-identity:GetId
+                                - cognito-identity:GetOpenIdToken
+                                - cognito-identity:ListIdentityPools
+                                - iot:DescribeEndpoint
+                                Resource: "*"
+                            -   Effect: Allow
+                                Action: iot:Connect
+                                Resource: 
+                                - !Join [":",["arn:aws:iot", !Ref "AWS::Region", !Ref "AWS::AccountId", "client/${cognito-identity.amazonaws.com:sub}"]]
+                            -   Effect: Allow
+                                Action: iot:AttachPolicy
+                                Resource: "*"
+                                Condition:
+                                    IpAddress:
+                                        aws:SourceIp: !Sub ${IpAddress}                                
+                            -   Effect: Allow
+                                Action: sts:AssumeRoleWithWebIdentity
+                                Resource: "*"
+                            -   Effect: Allow
+                                Action: 
+                                - secretsmanager:GetSecretValue
+                                - secretsmanager:DescribeSecret
+                                Resource: !Join 
+                                            -   ""
+                                            -   - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:'
+                                                - !Ref CognitoUserPool
+                                                - '*'
+    IAMUnAuthenticatedRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            Path: "/"
+            MaxSessionDuration: 3600            
+            RoleName: !Sub ${Prefix}-IdentityPoolUnAuthRole
+            AssumeRolePolicyDocument: 
+                Version: '2012-10-17'
+                Statement:
+                    -   Effect: Allow
+                        Principal:
+                            Federated: "cognito-identity.amazonaws.com"
+                        Action: "sts:AssumeRoleWithWebIdentity"
+                        Condition:
+                            StringEquals:
+                                #cognito-identity.amazonaws.com:aud: !Join [":", [!Ref "AWS::Region", !Ref CognitoIdentityPool]]
+                                cognito-identity.amazonaws.com:aud: !Ref CognitoIdentityPool
+                            ForAnyValue:StringLike:
+                                cognito-identity.amazonaws.com:amr: unauthenticated
+            Policies:
+                -   PolicyName: !Sub ${Prefix}-IdentityPoolUnAuthRolePolicy
+                    PolicyDocument:
+                        Version: "2012-10-17"
+                        Statement:
+                            -   Effect: Allow
+                                Action: 
+                                - secretsmanager:GetSecretValue
+                                - secretsmanager:DescribeSecret
+                                Resource: !Join 
+                                            -   ""
+                                            -   - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:'
+                                                - !Ref CognitoUserPool
+                                                - '*'
+    IAMLambdaExecutionRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            Path: "/"
+            MaxSessionDuration: 3600            
+            RoleName: !Sub ${Prefix}-LambdaCognitoPresignupExecutionRole
+            AssumeRolePolicyDocument: 
+                Version: '2012-10-17'
+                Statement:
+                    -   Effect: Allow
+                        Principal:
+                            Service:
+                                - "lambda.amazonaws.com"
+                        Action:
+                        - "sts:AssumeRole"
+            Policies:
+                -   PolicyName: !Sub ${Prefix}-LambdaCognitoPresignupExecutionRolePolicy
+                    PolicyDocument:
+                        Version: "2012-10-17"
+                        Statement:
+                            -   Effect: Allow
+                                Action: logs:CreateLogGroup
+                                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+                            -   Effect: Allow
+                                Action:
+                                - logs:CreateLogStream
+                                - logs:PutLogEvents
+                                Resource:
+                                - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${Prefix}-cognito-presignup-lambda:*
+                            -   Effect: Allow
+                                Action: cognito-idp:SignUp
+                                Resource: '*'
+    IAMLambdaExecutionRole2:
+        Type: "AWS::IAM::Role"
+        Properties:
+            Path: "/"
+            MaxSessionDuration: 3600            
+            RoleName: !Sub ${Prefix}-LambdaCognitoUserCreationRole
+            AssumeRolePolicyDocument: 
+                Version: '2012-10-17'
+                Statement:
+                    -   Effect: Allow
+                        Principal:
+                            Service:
+                                - "lambda.amazonaws.com"
+                        Action:
+                        - "sts:AssumeRole"
+            Policies:
+                -   PolicyName: !Sub ${Prefix}-LambdaCognitoUserCreationRolePolicy
+                    PolicyDocument:
+                        Version: "2012-10-17"
+                        Statement:
+                            -   Effect: Allow
+                                Action: logs:CreateLogGroup
+                                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+                            -   Effect: Allow
+                                Action:
+                                - logs:CreateLogStream
+                                - logs:PutLogEvents
+                                Resource:
+                                - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${Prefix}-cognito-user-creation:*
+                            -   Effect: Allow
+                                Action: 
+                                - secretsmanager:CreateSecret
+                                - secretsmanager:DeleteSecret
+                                - secretsmanager:TagResource
+                                - secretsmanager:UntagResource
+                                Resource: !Sub
+                                    - arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${CUPID}_${Prefix}-app-user*
+                                    - { CUPID: !Ref CognitoUserPool }
+                            -   Effect: Allow
+                                Action: 
+                                - cognito-idp:SignUp
+                                - secretsmanager:GetRandomPassword
+                                - iot:DescribeEndpoint
+                                Resource: '*'
+                            -   Effect: Allow
+                                Action: cognito-idp:AdminDeleteUser
+                                Resource: !Join 
+                                            -   ""
+                                            -   - !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/
+                                                - !Ref CognitoUserPool
+    CognitoIoTPolicy:
+        Type: AWS::IoT::Policy
+        Properties:
+            PolicyName: !Sub ${Prefix}-cognito-iot-policy
+            PolicyDocument:
+                Version: 2012-10-17
+                Statement:
+                -   Effect: Allow
+                    Action:
+                    - iot:Connect
+                    Resource: !Join 
+                                -   ""
+                                -   -   !Sub arn:aws:iot:${AWS::Region}:${AWS::AccountId}:client/*
+                -   Effect: Allow
+                    Action:
+                    - iot:Publish
+                    - iot:Receive
+                    Resource: 
+                    - !Join ["",["arn:aws:iot:", !Ref "AWS::Region",":", !Ref "AWS::AccountId",":topic/",!Ref CognitoIdentityPool,"/${iot:ClientId}/*"]]
+                -   Effect: Allow
+                    Action:
+                    - iot:Subscribe
+                    Resource: 
+                    - !Join ["",["arn:aws:iot:", !Ref "AWS::Region",":", !Ref "AWS::AccountId",":topicfilter/",!Ref CognitoIdentityPool,"/${iot:ClientId}/*"]]
+    #             #     Resource: !Sub
+    #             #         - arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/${CIPID}/"${iot:ClientId}"/*
+    #             #         - { CIPID: !Ref CognitoIdentityPool }
+    #             # -   Effect: Allow
+    #             #     Action:
+    #             #     - iot:Receive
+    #             #     - iot:Subscribe
+    #             #     Resource: !Sub
+    #             #         - arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topicfilter/${CIPID}/${iot:ClientId}/*
+    #             #         - { CIPID: !Ref CognitoIdentityPool }
+    LambdaFunction:
+        Type: "AWS::Lambda::Function"
+        Properties:
+            Description: ""
+            FunctionName: !Sub ${Prefix}-cognito-presignup-lambda
+            Handler: "index.function_handler"
+            MemorySize: 128
+            Role: !GetAtt IAMLambdaExecutionRole.Arn
+            Runtime: "python3.7"
+            Timeout: 30
+            Code:
+                ZipFile: |
+                    import json, logging, sys
+                    # Configure logging
+                    logger = logging.getLogger()
+                    logger.setLevel(logging.INFO)
+                    streamHandler = logging.StreamHandler(stream=sys.stdout)
+                    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+                    streamHandler.setFormatter(formatter)
+                    logger.addHandler(streamHandler)
+                    def function_handler(event, context):
+                        # It sets the user pool autoConfirmUser flag after validating the email domain
+                        print(json.dumps(event, indent=2))
+                        event['response']['autoConfirmUser'] = False
+                        # Split the email address so we can compare domains
+                        address = event['request']['userAttributes']['email'].split('@')
+                        # This example uses a custom attribute 'custom:domain'
+                        if 'email' in event['request']['userAttributes']:
+                            if address[1] == 'amazon.com':
+                                event['response']['autoConfirmUser'] = True
+                        # Return to Amazon Cognito
+                        return event
+    LambdaPermission:
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            Action: "lambda:InvokeFunction"
+            FunctionName: !GetAtt LambdaFunction.Arn
+            Principal: "cognito-idp.amazonaws.com"
+            SourceArn: !GetAtt CognitoUserPool.Arn
+    SecretResourcePolicy:
+        Type: 'AWS::SecretsManager::ResourcePolicy'
+        DependsOn: CognitoUserLambdaFunction
+        Properties:
+            SecretId: !GetAtt CognitoUserPoolUserCreation.SecretArn
+            ResourcePolicy:
+                Version: 2012-10-17
+                Statement:
+                    -   Action: 
+                        - 'secretsmanager:GetSecretValue'
+                        - 'secretsmanager:DescribeSecret'
+                        Effect: Deny
+                        Principal:
+                            AWS: "*"
+                        Resource: !GetAtt CognitoUserPoolUserCreation.SecretArn
+                        Condition:
+                            NotIpAddress:
+                                aws:SourceIp: !Sub ${IpAddress}
+Outputs:
+    CognitoIdentityPoolID:
+        Description: ID for Cognito Identity Pool
+        Value: !Ref CognitoIdentityPool 
+    ClientID:
+        Description: ID for App client in cognito user pool
+        Value: !Ref CognitoUserPoolClient
+    SecretARN:
+        Description: ARN for Cognito user pool user account
+        Value: !GetAtt CognitoUserPoolUserCreation.SecretArn
+    IoTPolicy:
+        Description: IoT policy name
+        Value: !Ref CognitoIoTPolicy
