@@ -49,6 +49,9 @@ Resources:
             ClientName: !Sub ${Prefix}-app-client
             RefreshTokenValidity: 200
             GenerateSecret: false
+            ExplicitAuthFlows:
+                - ALLOW_USER_PASSWORD_AUTH
+                - ALLOW_REFRESH_TOKEN_AUTH 
     CognitoUserLambdaFunction:
         Type: "AWS::Lambda::Function"
         Properties:
@@ -84,6 +87,7 @@ Resources:
                             emailAddress=event['ResourceProperties']['EmailAddress']
                             userPoolId=event['ResourceProperties']['UserPoolId']
                             identityPoolId=event['ResourceProperties']['IdentityPoolId']
+                            iotPolicy=event['ResourceProperties']['IoTPolicy']
                             if event['RequestType'] == 'Create':
                                 password_response = secret_client.get_random_password(
                                 PasswordLength=12,
@@ -114,6 +118,10 @@ Resources:
                                     {
                                         'Key': 'EmailAddress',
                                         'Value': emailAddress
+                                    },
+                                    {
+                                        'Key': 'IoTPolicy',
+                                        'Value': iotPolicy
                                     }
                                 ]
                                 )
@@ -158,6 +166,7 @@ Resources:
             EmailAddress: !Sub ${Email}
             UserPoolId: !Ref CognitoUserPool
             IdentityPoolId: !Ref CognitoIdentityPool
+            IoTPolicy: !Ref CognitoIoTPolicy
 
     CognitoIdentityPool:
         Type: "AWS::Cognito::IdentityPool"
@@ -190,7 +199,8 @@ Resources:
                         Action: "sts:AssumeRoleWithWebIdentity"
                         Condition:
                             StringEquals:
-                                cognito-identity.amazonaws.com:aud: !Join [":", [!Ref "AWS::Region", !Ref CognitoIdentityPool]]
+                                #cognito-identity.amazonaws.com:aud: !Join [":", [!Ref "AWS::Region", !Ref CognitoIdentityPool]]
+                                cognito-identity.amazonaws.com:aud: !Ref CognitoIdentityPool
                             ForAnyValue:StringLike:
                                 cognito-identity.amazonaws.com:amr: authenticated
             Policies:
@@ -226,6 +236,12 @@ Resources:
                                 Action: iot:Connect
                                 Resource: 
                                 - !Join [":",["arn:aws:iot", !Ref "AWS::Region", !Ref "AWS::AccountId", "client/${cognito-identity.amazonaws.com:sub}"]]
+                            -   Effect: Allow
+                                Action: iot:AttachPolicy
+                                Resource: "*"
+                                Condition:
+                                    IpAddress:
+                                        aws:SourceIp: !Sub ${IpAddress}                                
                             -   Effect: Allow
                                 Action: sts:AssumeRoleWithWebIdentity
                                 Resource: "*"
@@ -346,6 +362,31 @@ Resources:
                                             -   ""
                                             -   - !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/
                                                 - !Ref CognitoUserPool
+    CognitoIoTPolicy:
+        Type: AWS::IoT::Policy
+        Properties:
+            PolicyName: !Sub ${Prefix}-cognito-iot-policy
+            PolicyDocument:
+                Version: 2012-10-17
+                Statement:
+                -   Effect: Allow
+                    Action:
+                    - iot:Connect
+                    Resource: !Sub
+                        - arn:aws:iot:${AWS::Region}:${AWS::AccountId}:client/*
+                -   Effect: Allow
+                    Action:
+                    - iot:Publish
+                    Resource: !Sub
+                        - arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/${CIPID}/${iot:ClientId}/*
+                        - { CIPID: !Ref CognitoIdentityPool }
+                -   Effect: Allow
+                    Action:
+                    - iot:Receive
+                    - iot:Subscribe
+                    Resource: !Sub
+                        - arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/${CIPID}/${iot:ClientId}/*
+                        - { CIPID: !Ref CognitoIdentityPool }
     LambdaFunction:
         Type: "AWS::Lambda::Function"
         Properties:
@@ -403,3 +444,16 @@ Resources:
                         Condition:
                             NotIpAddress:
                                 aws:SourceIp: !Sub ${IpAddress}
+Outputs:
+    CognitoIdentityPoolID:
+        Description: ID for Cognito Identity Pool
+        Value: !Ref CognitoIdentityPool 
+    ClientID:
+        Description: ID for App client in cognito user pool
+        Value: !Ref CognitoUserPoolClient
+    SecretARN:
+        Description: ARN for Cognito user pool user account
+        Value: !GetAtt CognitoUserPoolUserCreation.SecretArn
+    IoTPolicy:
+        Description: IoT policy name
+        Value: !Ref CognitoIoTPolicy

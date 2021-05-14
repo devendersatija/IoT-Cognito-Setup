@@ -23,10 +23,15 @@ IpAddress | A valid IP address for the device
 IPADDRESS='107.141.235.104'
 PREFIX="aod"
 EMAIL="satijads@amazon.com"
-STACK_NAME="cognito-iot-setup"
+STACK_NAME=$PREFIX-cognito-iot-setup
 OWNER="satijads"
+PROJECT="security-aod"
 
-aws cloudformation deploy --template cognito.yml --stack-name $STACK_NAME --parameter-overrides Prefix=$PREFIX Email=$EMAIL IpAddress=$IPADDRESS --tags Project=SecurityAod Owner=$OWNER
+#aws cloudformation delete-stack --stack-name $STACK_NAME 
+
+aws cloudformation deploy --template cognito.yml --stack-name $STACK_NAME --parameter-overrides Prefix=$PREFIX Email=$EMAIL IpAddress=$IPADDRESS --tags Project=$PROJECT Owner=$OWNER --capabilities CAPABILITY_NAMED_IAM
+
+
 ```
 
 ## List of Resources
