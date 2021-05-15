@@ -20,11 +20,11 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 streamHandler.setFormatter(formatter)
 logger.addHandler(streamHandler)
 
-def publish_mqtt(cipid,user_data,secret_details,auth_credentials):
+def publish_mqtt(user_data,secret_details,auth_credentials):
     # Init AWSIoTMQTTClient.
     # MQTT client can only connect if MQTT client is same as unique identity ID. 
     # Client can only write to CognitoIdentityPoolId/IdentityID/*
-    cognitoIdentityPoolID = cipid
+    cognitoIdentityPoolID = user_data['cognitoIdentityPoolID']
     mqtttopic = cognitoIdentityPoolID + "/" + auth_credentials['identityID'] + "/" + user_data['topic']
     # only allow client with identity id to conenct
     myAWSIoTMQTTClient = AWSIoTMQTTClient(auth_credentials['identityID'], useWebsocket=True)

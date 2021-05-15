@@ -10,7 +10,7 @@ def get_unauth_credentials(user_data):
     sts_client = boto3.client('sts', region_name=user_data['region'])
     sts_response = sts_client.assume_role_with_web_identity(
         RoleArn=user_data['rolearn'],
-        RoleSessionName=identityUnAuthID,
+        RoleSessionName=identityUnAuthID.split(':')[0],
         WebIdentityToken=temporaryOpenIdToken['Token'])
     unauth_credentials['uAccessKeyId'] = sts_response["Credentials"]["AccessKeyId"]
     unauth_credentials['uSecretKey'] = sts_response["Credentials"]["SecretAccessKey"]

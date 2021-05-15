@@ -124,11 +124,12 @@ Resources:
                                         'Value': userPoolId
                                     },
                                     {
-                                        'Key': 'ClientId',
-                                        'Value': clientId
-                                    },
+                                        'Key': 'IoTPolicy',
+                                        'Value': iotPolicy
+                                    }
                                 ]
                                 )
+                                responseData['SecretName'] = secret_response['Name']
                                 responseData['SecretArn'] = secret_response['ARN']
                                 response = client.sign_up(
                                 ClientId=clientId,
@@ -465,15 +466,15 @@ Resources:
                             NotIpAddress:
                                 aws:SourceIp: !Sub ${IpAddress}
 Outputs:
+    RootCA:
+        Description: Download root CA locally on the device
+        Value: "curl https://www.amazontrust.com/repository/AmazonRootCA1.pem"
+    CognitoUnAuthRole:
+        Description: Role ARN for unauthenticated IAM role
+        Value: !GetAtt IAMUnAuthenticatedRole.Arn
+    SecretName:
+        Description: ARN for Cognito user pool user account
+        Value: !GetAtt CognitoUserPoolUserCreation.SecretName
     CognitoIdentityPoolID:
         Description: ID for Cognito Identity Pool
         Value: !Ref CognitoIdentityPool 
-    ClientID:
-        Description: ID for App client in cognito user pool
-        Value: !Ref CognitoUserPoolClient
-    SecretARN:
-        Description: ARN for Cognito user pool user account
-        Value: !GetAtt CognitoUserPoolUserCreation.SecretArn
-    IoTPolicy:
-        Description: IoT policy name
-        Value: !Ref CognitoIoTPolicy

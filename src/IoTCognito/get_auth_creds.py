@@ -1,7 +1,7 @@
 import boto3
 import json
 
-def get_auth_credentials(secret_details, cipid):
+def get_auth_creds(secret_details, cipid):
     # Cognito auth
     auth_credentials={}
     auth_credentials['region']=secret_details['region']
