@@ -38,6 +38,8 @@ def publish_mqtt(user_data,secret_details,auth_credentials):
     myAWSIoTMQTTClient.configureConnectDisconnectTimeout(10)  # 10 sec
     myAWSIoTMQTTClient.configureMQTTOperationTimeout(5)  # 5 sec
     # Connect and subscribe to AWS IoT
+    print("I am here")
+    print("client id is:"+auth_credentials['identityID'])
     myAWSIoTMQTTClient.connect()
     myAWSIoTMQTTClient.subscribe(mqtttopic, 1, customCallback)
     time.sleep(2)
