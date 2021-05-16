@@ -13,6 +13,7 @@ sdf
 
 ## How to run cloudformation
 Cloudformation takes three parameters. 
+
 Parameter Name | Description
 -------------- | --------------
 Prefix | Prefix for all resources to be created
