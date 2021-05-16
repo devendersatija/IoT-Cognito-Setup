@@ -2,12 +2,13 @@
 how to use cognito identities with unregistered IoT devices/and python sdk. 
 
 ## Design Principles
-1. __Principle1__ - dsfkdfsdfsdf
-sdfsdkfjsdlfsd
-dsf
-sdf
-sdf
-2. __Principle2__ - 
+1. __Implement a strong identity foundation__ - To implement strong identity fountation there are multiple security controls before a device can publish data to IoT Core.
+    * Users are only approved if there email address in amazon.com domain. More advanced check can also be included. 
+    * Device has access to read only one secret in secret manager. This secret prvoides credentials to IAM user, and other needed info like Client ID, IoT Policy name, IoT Endpoint and user pool ID. 
+    * User is only able to access details, and publich/subscribe from the provided IP address. 
+2. __Enable traceability__ 
+
+3. __Apply security at all layers__
 
 
 
@@ -17,8 +18,8 @@ Cloudformation takes three parameters.
 Parameter Name | Description
 -------------- | --------------
 Prefix | Prefix for all resources to be created
-Email | email address related to the owner, and is used for user sign up in cognito
-IpAddress | A valid IP address for the device
+Email | Email address related to the owner, and is used for user sign up in cognito. If the email address domain is amazon, user is automatically confirmed
+IpAddress | A valid IP address for the device to be connected
 
 ```console
 IPADDRESS='107.141.235.104'
