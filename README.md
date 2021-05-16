@@ -14,7 +14,7 @@ sdf
 ## How to run cloudformation
 Cloudformation takes three parameters. 
 Parameter Name | Description
------------- | -------------
+-------------- | --------------
 Prefix | Prefix for all resources to be created
 Email | email address related to the owner, and is used for user sign up in cognito
 IpAddress | A valid IP address for the device
