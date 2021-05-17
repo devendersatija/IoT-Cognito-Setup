@@ -8,7 +8,7 @@ how to use cognito identities with unregistered IoT devices/and python sdk.
     * User is only able to access details, and publich/subscribe from the provided IP address. 
 2. __Enable traceability__ - Once [AWS IoT logging is enabled](https://docs.aws.amazon.com/iot/latest/developerguide/configure-logging.html), you can browse to AWS CloudWatch logs and browse for AWSIotLogsV2 log group. AWS IoT sends progress events about each message as it passes from your devices through the message broker and rules engine. 
 
-3. __Apply security at all layers__
+3. __Apply security at all layers__ - 
 
 
 
