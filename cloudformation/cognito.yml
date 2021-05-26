@@ -473,7 +473,7 @@ Outputs:
         Description: Role ARN for unauthenticated IAM role
         Value: !GetAtt IAMUnAuthenticatedRole.Arn
     SecretName:
-        Description: ARN for Cognito user pool user account
+        Description: Name of the secret in AWS Secrets Manager
         Value: !GetAtt CognitoUserPoolUserCreation.SecretName
     CognitoIdentityPoolID:
         Description: ID for Cognito Identity Pool

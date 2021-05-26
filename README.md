@@ -11,7 +11,7 @@ how to use cognito identities with unregistered IoT devices/and python sdk.
 
 
 ## How to run cloudformation
-Cloudformation takes three parameters. 
+ To deploy all the needed infrastructure components via AWS CloudFormation. CloudFormation template takes three input parameters for setup as listed below:
 
 Parameter Name | Description
 -------------- | --------------
@@ -50,3 +50,11 @@ IAMLambdaExecutionRole2 | Lambda execution role for user creation lambda 'Cognit
 LambdaFunction | Lambda function as a pre-sign up trigger for cognito user pool to automatically confirm the user in amazon domain
 LambdaPermission | Allowing cognito to invoke pre-sign up lambda
 SecretResourcePolicy | Resource policy for the secret created, deny access to all IPs except the resource IP
+
+## Following outputs will be generated which can be used by device to connect securely
+Key | Description
+------------ | -------------
+CognitoIdentityPoolID | ID for Cognito Identity Pool
+CognitoUnAuthRole | Role ARN for unauthenticated IAM role
+RootCA | Download instructions to get Amazon RootCA certificate
+SecretName | Name of the secret in AWS Secrets Manager
