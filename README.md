@@ -2,13 +2,11 @@
 how to use cognito identities with unregistered IoT devices/and python sdk. 
 
 ## Design Principles
-1. __Implement a strong identity foundation__ - To implement strong identity fountation there are multiple security controls before a device can publish data to IoT Core.
-    * Users are only approved if there email address in amazon.com domain. More advanced check can also be included. 
-    * Device has access to read only one secret in secret manager. This secret prvoides credentials to IAM user, and other needed info like Client ID, IoT Policy name, IoT Endpoint and user pool ID. 
-    * User is only able to access details, and publich/subscribe from the provided IP address. 
-2. __Enable traceability__ - Once [AWS IoT logging is enabled](https://docs.aws.amazon.com/iot/latest/developerguide/configure-logging.html), you can browse to AWS CloudWatch logs and browse for AWSIotLogsV2 log group. AWS IoT sends progress events about each message as it passes from your devices through the message broker and rules engine. 
-
-3. __Apply security at all layers__ - 
+1. __Implement a strong identity foundation__ - To implement strong identity foundation there are multiple security controls before a device can publish data to IoT Core.
+    * Device registration is only approved if their email address is in amazon.com domain. More advanced check can also be included. For example: We can add a security check to approve IP address with in a specific subnet. 
+    * Device has access to the required read only secret in AWS Secrets Manager. This secret provides Cognito user pool credentials, and other needed info like Client ID, IoT Policy name, IoT Endpoint and user pool ID. This information will be used to generate temporary credentials during the device connectivity. 
+    * Device is only able to access details, and publish/subscribe from the provided IP address.  
+2. __Enable traceability__ - Once [AWS IoT logging is enabled](https://docs.aws.amazon.com/iot/latest/developerguide/configure-logging.html), you can browse to AWS CloudWatch logs and look for AWSIotLogsV2 log group. AWS IoT sends progress events about each message as it passes from your devices through the message broker and rules engine. 
 
 
 
