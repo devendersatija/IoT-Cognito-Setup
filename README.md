@@ -61,4 +61,4 @@ RootCA | Download instructions to get Amazon RootCA certificate
 SecretName | Name of the secret in AWS Secrets Manager
 
 ## Client Connection
-Use the provided sample setup.py script which authenticates via cognito identities to get temporary credentials and publish data over MQTT.
+Use the provided [sample script](setup.py) which authenticates via cognito identities to get temporary credentials and publish data over MQTT.
