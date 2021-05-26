@@ -51,10 +51,14 @@ LambdaFunction | Lambda function as a pre-sign up trigger for cognito user pool 
 LambdaPermission | Allowing cognito to invoke pre-sign up lambda
 SecretResourcePolicy | Resource policy for the secret created, deny access to all IPs except the resource IP
 
-## Following outputs will be generated which can be used by device to connect securely
+## Outputs 
+Following outputs will be generated which can be used by device to connect securely
 Key | Description
 ------------ | -------------
 CognitoIdentityPoolID | ID for Cognito Identity Pool
 CognitoUnAuthRole | Role ARN for unauthenticated IAM role
 RootCA | Download instructions to get Amazon RootCA certificate
 SecretName | Name of the secret in AWS Secrets Manager
+
+## Client Connection
+Use the provided sample setup.py script which authenticates via cognito identities to get temporary credentials and publish data over MQTT.
