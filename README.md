@@ -16,7 +16,7 @@ how to use cognito identities with unregistered IoT devices/and python sdk.
 Parameter Name | Description
 -------------- | --------------
 Prefix | Prefix for all resources to be created
-Email | Email address related to the owner, and is used for user sign up in cognito. If the email address domain is amazon, user is automatically confirmed
+Email | Email address related to the owner, and is used for user sign up in cognito. If the email address domain is amazon, user is automatically confirmed. Provide your amazon address for the test. For a non-amazon address, you can manually approve the sign up for user
 IpAddress | A valid IP address for the device to be connected
 
 ```console
@@ -54,11 +54,12 @@ SecretResourcePolicy | Resource policy for the secret created, deny access to al
 ## Outputs 
 Following outputs will be generated which can be used by device to connect securely
 Key | Description
---- | -------------
+-------------- | --------------
 CognitoIdentityPoolID | ID for Cognito Identity Pool
 CognitoUnAuthRole | Role ARN for unauthenticated IAM role
 RootCA | Download instructions to get Amazon RootCA certificate
 SecretName | Name of the secret in AWS Secrets Manager
+
 
 ## Client Connection
 Use the provided [sample script](setup.py) which authenticates via cognito identities to get temporary credentials and publish data over MQTT. To run the script, clone the repo on the device and update the config in the script. As the script is executed, you can verify the data in IoT Core. 
