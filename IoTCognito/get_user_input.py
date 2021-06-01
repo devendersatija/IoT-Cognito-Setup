@@ -10,7 +10,7 @@
 # and limitations under the License.
 
 def get_user_input(config):
-    user_data={}
+    user_data = {}
     # Accept user data
     # parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     # parser.add_argument("-r", "--rootCA", action="store", required=True, dest="rootCAPath", help="Root CA file path")
@@ -22,8 +22,8 @@ def get_user_input(config):
 
     user_data['rootCAPath'] = config['rootCA']
     user_data['cognitoIdentityPoolID'] = config['CognitoIdentityPoolID']
-    user_data['region']=config['CognitoIdentityPoolID'].split(':')[0]
-    user_data['topic'] = config['topic'] 
+    user_data['region'] = config['CognitoIdentityPoolID'].split(':')[0]
+    user_data['topic'] = config['topic']
     user_data['secret_name'] = config['secretname']
-    user_data['rolearn'] = config['unauthrolearn'] 
+    user_data['rolearn'] = config['unauthrolearn']
     return user_data

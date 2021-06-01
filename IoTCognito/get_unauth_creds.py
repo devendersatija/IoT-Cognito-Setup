@@ -11,13 +11,17 @@
 
 import boto3
 
+
 def get_unauth_credentials(user_data):
-    unauth_credentials={}
-    unauth_credentials['region']=user_data['region']
-    cognitoIdentityClient = boto3.client('cognito-identity', region_name=user_data['region'])
-    temporaryUnAuthIdentityId = cognitoIdentityClient.get_id(IdentityPoolId=user_data['cognitoIdentityPoolID'])
+    unauth_credentials = {}
+    unauth_credentials['region'] = user_data['region']
+    cognitoIdentityClient = boto3.client(
+        'cognito-identity', region_name=user_data['region'])
+    temporaryUnAuthIdentityId = cognitoIdentityClient.get_id(
+        IdentityPoolId=user_data['cognitoIdentityPoolID'])
     identityUnAuthID = temporaryUnAuthIdentityId["IdentityId"]
-    temporaryOpenIdToken = cognitoIdentityClient.get_open_id_token(IdentityId=identityUnAuthID)
+    temporaryOpenIdToken = cognitoIdentityClient.get_open_id_token(
+        IdentityId=identityUnAuthID)
     sts_client = boto3.client('sts', region_name=user_data['region'])
     sts_response = sts_client.assume_role_with_web_identity(
         RoleArn=user_data['rolearn'],
