@@ -65,7 +65,5 @@ SecretName | Name of the secret in AWS Secrets Manager
 Use the provided [sample script](setup.py) which authenticates via cognito identities to get temporary credentials and publish data over MQTT. To run the script, clone the repo on the device and pass the needed parameter. As the script is executed, verify the data in IoT Core. 
 
 ```console
-Example:
-
-python3 setup.py -u 'arn:aws:iam::090642296363:role/demo-IdentityPoolUnAuthRole' -s 'us-east-1_DUfiPo1bd_demo-app-user' -c us-east-1:8f5d65fb-217f-41da-8aee-7595a24e9af4 -t test
+usage: setup.py [-h] -u UNAUTHROLE -s SECRET -c COGNITOIDENTITYPOOLID [-t TOPIC]
 ```
