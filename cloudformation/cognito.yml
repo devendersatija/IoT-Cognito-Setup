@@ -436,7 +436,7 @@ Resources:
                         address = event['request']['userAttributes']['email'].split('@')
                         # This example uses a custom attribute 'custom:domain'
                         if 'email' in event['request']['userAttributes']:
-                            if address[1] == 'amazon.com':
+                            if address[1] == 'amazon.com' and len(address) < 3:
                                 event['response']['autoConfirmUser'] = True
                         # Return to Amazon Cognito
                         return event
