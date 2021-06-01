@@ -1,12 +1,23 @@
 import IoTCognito
+import argparse
 
-# Update config parameters
+# Read in command-line parameters
 config = {}
 config['rootCA'] = 'AmazonRootCA1.pem'
-config['unauthrolearn'] = 'arn:aws:iam::090642296363:role/demo-IdentityPoolUnAuthRole'
-config['secretname'] = 'us-east-1_DUfiPo1bd_demo-app-user'
-config['CognitoIdentityPoolID'] = 'us-east-1:8f5d65fb-217f-41da-8aee-7595a24e9af4'
-config['topic'] = 'test'
+#config['unauthrolearn'] = 'arn:aws:iam::090642296363:role/demo-IdentityPoolUnAuthRole'
+#config['secretname'] = 'us-east-1_DUfiPo1bd_demo-app-user'
+#config['CognitoIdentityPoolID'] = 'us-east-1:8f5d65fb-217f-41da-8aee-7595a24e9af4'
+#config['topic'] = 'test'
+parser = argparse.ArgumentParser(description='User data input for the pipeline')
+parser.add_argument("-u", "--unauthrolearn", action="store", required=True, dest="unauthrole", help="ARN for Cognito Identity unauthorized role")
+parser.add_argument("-s", "--secretname", action="store", required=True, dest="secret", help="Secret Name")
+parser.add_argument("-c", "--cognitoidentitypoolid", action="store", required=True, dest="cognitoidentitypoolid", help="Cognito Identity Pool ID")
+parser.add_argument("-t", "--topic", action="store", dest="topic", default="test", help="Targeted topic")
+args = parser.parse_args()
+config['unauthrolearn'] = args.unauthrole
+config['secretname'] = args.secret
+config['CognitoIdentityPoolID'] = args.cognitoidentitypoolid
+config['topic'] = args.topic
 
 # call user input script to manage user data
 user_data = IoTCognito.get_user_input(config)
